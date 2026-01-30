@@ -9,6 +9,8 @@ import (
 	proxyserver "github.com/Archiker-715/cache-server/internal/proxy-server"
 )
 
+var cch = cache.InitCache()
+
 func main() {
 
 	// for dbg
@@ -18,16 +20,14 @@ func main() {
 		"--origin", "test",
 	}
 
-	cache := cache.InitCache()
-
 	if startingCommand() {
 		var port, method, url, body string
 		flags.InitStartingServer(&port, &method, &url, &body)
-		proxyserver.Start(port, url, cache)
+		proxyserver.Start(port, url, cch)
 	} else if clearCacheCommand() {
 		var clearCache string
 		flags.InitClearCache(&clearCache)
-		cache.ClearCache()
+		cch.ClearCache()
 	}
 
 	select {}
