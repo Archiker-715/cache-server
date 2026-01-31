@@ -1,17 +1,19 @@
 package proxyserver
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	neturl "net/url"
 
-	"github.com/Archiker-715/cache-server/internal/cache"
+	"github.com/Archiker-715/cache-server/internal/entity"
 )
 
-func createProxy(port, url string, c *cache.Cache) *httputil.ReverseProxy {
-	urlToDirect, err := neturl.Parse(url)
+func createProxy(request *entity.Request) *httputil.ReverseProxy {
+	urlToDirect, err := neturl.Parse(request.Url)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -22,16 +24,17 @@ func createProxy(port, url string, c *cache.Cache) *httputil.ReverseProxy {
 			r.URL.Host = urlToDirect.Host
 			r.Host = urlToDirect.Host
 		},
-		ModifyResponse: func(r *http.Response) error {
-			urlPath := r.Request.URL.Path + "?" + r.Request.URL.RawQuery
-			bodyBytes, err := io.ReadAll(r.Body)
+		ModifyResponse: func(resp *http.Response) error {
+			urlPath := resp.Request.URL.Path + "?" + resp.Request.URL.RawQuery
+			fmt.Println("proxy", urlPath)
+			respBodyBytes, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return err
 			}
-			r.Body.Close()
+			resp.Body = io.NopCloser(bytes.NewBuffer(respBodyBytes))
 
-			c.SaveCache(c.ReflectReqPort(port), c.ReflectReqURL(urlPath), bodyBytes)
-			r.Header.Add("X-Cache", "MISS")
+			request.Cache.SaveCache(request.Cache.ReflectReqPort(request.Port), request.Cache.ReflectReqURL(urlPath), request.Body, request.Method, respBodyBytes)
+			resp.Header.Add("X-Cache", "MISS")
 			return nil
 		},
 	}
