@@ -15,8 +15,8 @@ import (
 var cch = cache.InitCache()
 
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
 
+	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		if !scanner.Scan() {
 			break
@@ -29,12 +29,16 @@ func main() {
 
 		if startingCommand(args) {
 			var port, method, url, body string
-			flags.InitStartingServer(args, &port, &method, &url, &body)
+			flags.StartingServer(args, &port, &method, &url, &body)
 			go proxyserver.Start(fillRequest(port, method, url, body, cch))
 		} else if clearCacheCommand(args) {
 			var clearCache string
-			flags.InitClearCache(args, &clearCache)
+			flags.ClearCache(args, &clearCache)
 			cch.ClearCache()
+		} else if shutdown(args) {
+			var port string
+			flags.Shutdown(args, &port)
+			proxyserver.Shutdown(port)
 		}
 	}
 }
@@ -48,6 +52,13 @@ func startingCommand(args []string) bool {
 
 func clearCacheCommand(args []string) bool {
 	if slices.Contains(args, "--clear-cache") {
+		return true
+	}
+	return false
+}
+
+func shutdown(args []string) bool {
+	if slices.Contains(args, "--shutdown") {
 		return true
 	}
 	return false
